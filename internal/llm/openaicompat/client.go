@@ -85,6 +85,10 @@ type Config struct {
 	// Routing, when set, is sent as the request's `provider` object (which
 	// hosting providers may serve it). Sent like Reasoning.
 	Routing *llm.Routing
+	// Temperature and TopP, when set, are sent as the request's `temperature`
+	// and `top_p`. Nil omits the field, leaving the serving host's default.
+	Temperature *float64
+	TopP        *float64
 	// ResponseFormat is "json_object" (send response_format) or "off" (omit).
 	ResponseFormat string
 	// Thinking is the value sent as chat_template_kwargs.enable_thinking.
@@ -296,6 +300,8 @@ type chatRequest struct {
 	ChatTemplateKwargs map[string]any  `json:"chat_template_kwargs,omitempty"`
 	Reasoning          *llm.Reasoning  `json:"reasoning,omitempty"`
 	Provider           *llm.Routing    `json:"provider,omitempty"`
+	Temperature        *float64        `json:"temperature,omitempty"`
+	TopP               *float64        `json:"top_p,omitempty"`
 }
 
 type chatMessage struct {
@@ -402,6 +408,8 @@ func (c *Client) doRequest(ctx context.Context, system string, prompt llm.Prompt
 	}
 	body.Reasoning = c.cfg.Reasoning
 	body.Provider = c.cfg.Routing
+	body.Temperature = c.cfg.Temperature
+	body.TopP = c.cfg.TopP
 	if c.cfg.ResponseFormat != "off" {
 		body.ResponseFormat = &responseFormat{Type: "json_object"}
 	}

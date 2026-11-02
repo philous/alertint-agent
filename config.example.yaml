@@ -94,6 +94,8 @@ llm:
   # routing:                                  # the gateway's `provider` object: which hosting providers
   #   only: [example-provider]                # may serve a request (also order, ignore, allow_fallbacks,
   #   allow_fallbacks: false                  # quantizations).
+  # temperature: 1.0                          # sampling sent on every request; unset leaves the serving
+  # top_p: 1.0                                # host's own default (hosts differ). openai-compatible only.
 
 correlator:
   window_seconds: 90       # group alerts arriving within this window

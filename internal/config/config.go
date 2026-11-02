@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/url"
 	"os"
@@ -596,6 +597,16 @@ type LLMConfig struct {
 	// providers at different quantizations. Only for "openai-compatible"; nil
 	// sends nothing.
 	Routing *llm.Routing `yaml:"routing,omitempty"`
+	// Temperature, when set, is sent as the request's `temperature`. Unset
+	// (nil) sends nothing, so the serving host's own default applies, which
+	// differs between hosts. Set it to pin sampling, e.g. 1.0 for models whose
+	// vendor recommends it. 0 is a valid value (greedy decoding), which is why
+	// this is a pointer. Only for "openai-compatible"; range 0 to 2.
+	Temperature *float64 `yaml:"temperature,omitempty"`
+	// TopP, when set, is sent as the request's `top_p` (nucleus sampling).
+	// Unset (nil) sends nothing. Only for "openai-compatible"; range above 0
+	// up to 1.
+	TopP *float64 `yaml:"top_p,omitempty"`
 	// TimeoutSeconds is the whole-request HTTP timeout for either provider.
 	// Default 120 (the previously hardcoded client default). Local endpoints
 	// under storm concurrency typically need ~300.
@@ -1108,6 +1119,12 @@ func (c *Config) validateLLM() []string {
 		if c.LLM.Routing != nil {
 			errs = append(errs, `llm.routing is only valid for provider "openai-compatible" (provider routing is a gateway feature)`)
 		}
+		if c.LLM.Temperature != nil {
+			errs = append(errs, `llm.temperature is only valid for provider "openai-compatible" (the anthropic client sets sampling itself)`)
+		}
+		if c.LLM.TopP != nil {
+			errs = append(errs, `llm.top_p is only valid for provider "openai-compatible" (the anthropic client sets sampling itself)`)
+		}
 	case "openai-compatible":
 		errs = append(errs, c.validateLLMBaseURL()...)
 		switch c.LLM.ResponseFormat {
@@ -1121,6 +1138,7 @@ func (c *Config) validateLLM() []string {
 		}
 		errs = append(errs, c.validateLLMReasoning()...)
 		errs = append(errs, c.validateLLMRouting()...)
+		errs = append(errs, c.validateLLMSampling()...)
 	case "":
 		errs = append(errs, "llm.provider is required")
 	default:
@@ -1182,6 +1200,20 @@ func (c *Config) validateLLMRouting() []string {
 				errs = append(errs, fmt.Sprintf("llm.routing.%s[%d] is empty", list.name, i))
 			}
 		}
+	}
+	return errs
+}
+
+// validateLLMSampling checks llm.temperature and llm.top_p ranges for the
+// openai-compatible provider. A value outside the range would be rejected or
+// silently clamped by the endpoint, so it fails at startup instead.
+func (c *Config) validateLLMSampling() []string {
+	var errs []string
+	if t := c.LLM.Temperature; t != nil && (*t < 0 || *t > 2 || math.IsNaN(*t)) {
+		errs = append(errs, fmt.Sprintf("llm.temperature (%v) must be between 0 and 2", *t))
+	}
+	if p := c.LLM.TopP; p != nil && (*p <= 0 || *p > 1 || math.IsNaN(*p)) {
+		errs = append(errs, fmt.Sprintf("llm.top_p (%v) must be above 0 and at most 1", *p))
 	}
 	return errs
 }

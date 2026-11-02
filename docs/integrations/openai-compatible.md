@@ -95,6 +95,8 @@ llm:
   routing:                       # the `provider` request object
     only: [example-provider]     # also: order, ignore, allow_fallbacks, quantizations
     allow_fallbacks: false
+  temperature: 1.0               # optional sampling, sent on every request
+  top_p: 1.0
 ```
 
 - A hosted model is often served by several providers at different
@@ -105,7 +107,10 @@ llm:
 - `allow_fallbacks: false` with a single provider turns that provider's
   upstream rate limit (HTTP 429) into errors, because the gateway cannot route
   around it. Prefer `order` or `quantizations` and leave fallbacks on.
-- Both settings are sent on every request as configured. If an endpoint
+- `temperature` and `top_p` are left out of the request unless set, so the
+  serving host's own default applies, and hosts differ. Set them when a model
+  vendor recommends specific values, so every host samples the same way.
+- All of these settings are sent on every request as configured. If an endpoint
   rejects them with HTTP 400, it does not support them: remove the setting.
 - Thinking spends output tokens before the JSON, so a model that thinks also
   needs `max_tokens` and, for the three small bounded calls,

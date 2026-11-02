@@ -73,6 +73,22 @@ func TestLLMClientConfig_CarriesReasoningAndRouting(t *testing.T) {
 	}
 }
 
+// TestLLMClientConfig_CarriesSampling pins that llm.temperature and llm.top_p
+// reach the openai-compatible client, and stay nil when unset.
+func TestLLMClientConfig_CarriesSampling(t *testing.T) {
+	cfg := config.Defaults()
+	if got := llmopenaiCfg(&cfg, "", cfg.LLM.TimeoutSeconds, cfg.LLM.Model, cfg.LLM.MaxTokens); got.Temperature != nil || got.TopP != nil {
+		t.Errorf("unset sampling = %v/%v, want nil/nil", got.Temperature, got.TopP)
+	}
+
+	temp, topP := 1.0, 0.95
+	cfg.LLM.Temperature, cfg.LLM.TopP = &temp, &topP
+	got := llmopenaiCfg(&cfg, "", cfg.LLM.TimeoutSeconds, cfg.LLM.Model, cfg.LLM.MaxTokens)
+	if got.Temperature == nil || *got.Temperature != 1 || got.TopP == nil || *got.TopP != 0.95 {
+		t.Errorf("sampling = %v/%v, want 1/0.95", got.Temperature, got.TopP)
+	}
+}
+
 // TestBuildClassifierClient_OpenAICompatibleReusesLLMModel pins the exact
 // regression this branch exists to prevent (see buildClassifierClient's own
 // comment): on openai-compatible, the classifier must request cfg.LLM.Model,

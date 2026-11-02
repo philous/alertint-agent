@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `chat_template_kwargs`. Both are off by default and are sent as configured,
   without the resend that drops a rejected `chat_template_kwargs`. See
   Configuration: `llm`.
+- `llm.temperature` and `llm.top_p` (`openai-compatible` only) are sent as the
+  request's `temperature` and `top_p`. Unset, nothing is sent and the serving
+  host's own default applies, which differs between hosts and could not be
+  pinned before. `0` is accepted as an explicit value. See Configuration: `llm`.
 
 ## [0.16.0] - 2026-10-26
 
